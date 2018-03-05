@@ -7,6 +7,7 @@ import csvtojson from 'csvtojson';
 // import { startDate, endDate } from '../graph/constants';
 import jsonp from 'jsonp';
 // import googleFinance from 'google-finance';
+import alphaVantageAPIKey from '../../secrets';
 
 export default class extends Component {
 	constructor () {
@@ -72,11 +73,11 @@ export default class extends Component {
 // }
 
 // getFinanceData (ticker) {
-//     $.ajax({ 
+//     $.ajax({
 //     		type: 'GET',
 //     		url: `https://www.google.com/finance/historical?q=NASDAQ:${ticker}&output=csv`,
 //     		// data: {
-//     		// 	q: `NASDAQ:${ticker}`, 
+//     		// 	q: `NASDAQ:${ticker}`,
 //     		// 	output: 'csv'
 //     		// },
 //             // jsonpCallback: 'jsonCallback',
@@ -131,6 +132,9 @@ export default class extends Component {
 // 			return jsonArr;
 // 		});
 // }
+
+// original solution, before Google Finance API was discontinued:
+/*
 	getFinanceData (ticker) {
 		return axios.get('https://www.google.com/finance/historical', {
 				params: {
@@ -143,6 +147,40 @@ export default class extends Component {
                 	'Access-Control-Allow-Origin': '*'
             	},
 			}).then(res => {
+				const jsonArr = [];
+				csvtojson({noheader:false})
+					.fromString(res.data)
+					.on('csv', (csvRow) => { // csv => [1, 2, 3] , [4, 5, 6] , etc.
+					    // jsonArr.push(csvRow);
+					    jsonArr.push({
+					    	time: new Date(csvRow[0]).getTime()/1000, // date
+					    	value: [csvRow[4]] // close price
+					    })
+					})
+					.on('done', () => {
+					    console.log('Done parsing data');
+					})
+				return jsonArr;
+			})
+			.catch(err => {
+				console.error(err);
+			})
+	}
+	*/
+
+	getFinanceData (ticker) {
+		// TODO: alphavantage's API does not allow us to specify a startdate/enddate in the params.
+		// we need to refactor the parsing of the csv data to get only the data from 2010-01-01 to 2017-06-17. Also, alphavantage can give us a json output, so we might want to try that.
+		return axios.get('https://www.alphavantage.co/query', {
+			params: {
+				function: 'TIME_SERIES_DAILY_ADJUSTED',
+				symbol: ticker,
+				outputsize: 'full',
+				datatype: 'csv',
+				apikey: alphaVantageAPIKey,
+			},
+			}).then(res => {
+				console.log(res.data);///////////////////
 				const jsonArr = [];
 				csvtojson({noheader:false})
 					.fromString(res.data)
